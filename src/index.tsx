@@ -281,7 +281,7 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
     <!-- Actions -->
     <div class="q-actions">
       <button class="btn-nav" style="padding:7px 16px;font-size:.85rem" onclick="speakQuestion()">🔊 Đọc lại</button>
-      <button class="btn-main" style="font-size:.95rem;padding:9px 24px;letter-spacing:0;animation:none" onclick="revealAnswer()">✨ Xem đáp án</button>
+      <button class="btn-main" style="font-size:1rem;padding:10px 28px;letter-spacing:0;animation:btnPulse 2s ease-in-out infinite" id="btn-action-next" onclick="handleNextBtn()">➡ NEXT</button>
     </div>
   </div>
 </div>
@@ -292,15 +292,13 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 </div>
 
 <!-- ANSWER OVERLAY -->
-<div id="answer-overlay" onclick="closeAnswer()">
-  <div class="answer-card" onclick="event.stopPropagation()">
+<div id="answer-overlay" onclick="nextQuestion()">
+  <div class="answer-card" onclick="nextQuestion()" style="cursor:pointer">
     <p class="answer-label">⚡ Đáp án đúng ⚡</p>
     <p class="answer-text" id="answer-text-display"></p>
     <span class="confetti-emoji" id="answer-emoji">🎊</span>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="btn-nav" style="padding:7px 16px;font-size:.9rem" onclick="closeAnswer()">✕ Đóng</button>
-      <button class="btn-main" style="font-size:.9rem;padding:9px 24px;letter-spacing:0;animation:none" id="btn-next" onclick="nextQuestion()">➡ Câu tiếp</button>
-    </div>
+    <p style="color:rgba(255,255,255,.5);font-size:.8rem;margin-bottom:10px">Nhấn bất kỳ để tiếp tục</p>
+    <button class="btn-main" style="font-size:1rem;padding:11px 32px;letter-spacing:0" id="btn-next" onclick="event.stopPropagation();nextQuestion()">➡ NEXT</button>
   </div>
 </div>
 
@@ -321,7 +319,7 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
   <video id="media-video" controls playsinline style="max-width:min(640px,92vw);max-height:65vh;border-radius:16px;border:4px solid #FFD700"></video>
   <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
     <button class="btn-nav" style="font-size:.95rem;padding:9px 24px" onclick="closeMedia()">✕ Đóng video</button>
-    <button class="btn-main" style="font-size:.95rem;padding:9px 24px;letter-spacing:0;animation:none" onclick="revealAnswerFromMedia()">✨ Xem đáp án</button>
+    <button class="btn-main" style="font-size:.95rem;padding:9px 24px;letter-spacing:0;animation:none" onclick="revealAnswerFromMedia()">➡ NEXT</button>
   </div>
 </div>
 
@@ -703,6 +701,9 @@ function openQuestion(idx){
   updateTimerBar();
   document.getElementById('btn-countdown').textContent='▶ 5s';
   setTTSStatus('🔊 Đang đọc...');
+  // reset bottom NEXT button label
+  const actionBtn=document.getElementById('btn-action-next');
+  if(actionBtn) actionBtn.textContent='➡ NEXT';
 
   showScreen('screen-question');
 
@@ -854,7 +855,11 @@ function revealAnswer(){
   document.getElementById('answer-text-display').textContent=q.answer;
   document.getElementById('answer-emoji').textContent=isCorrect?'🎊':'😅';
   const isLast=currentIdx>=Q.length-1;
-  document.getElementById('btn-next').textContent=isLast&&gameMode==='competition'?'🏁 Kết thúc':'➡ Câu tiếp';
+  const nextLabel=isLast&&gameMode==='competition'?'🏁 KẾT THÚC':'➡ NEXT';
+  document.getElementById('btn-next').textContent=nextLabel;
+  // Also update bottom action button
+  const actionBtn=document.getElementById('btn-action-next');
+  if(actionBtn) actionBtn.textContent=nextLabel;
   document.getElementById('answer-overlay').classList.add('active');
 
   // speak answer
@@ -865,7 +870,23 @@ function closeAnswer(){
   document.getElementById('answer-overlay').classList.remove('active');
 }
 
+// handleNextBtn: called by the bottom NEXT button
+// - If answer not yet revealed => reveal it
+// - If already revealed => go to next question
+function handleNextBtn(){
+  if(!answerRevealed){
+    revealAnswer();
+  } else {
+    nextQuestion();
+  }
+}
+
 function nextQuestion(){
+  // Guard: prevent double-call if overlay already hidden
+  const overlay=document.getElementById('answer-overlay');
+  if(!overlay.classList.contains('active') && answerRevealed){
+    // overlay already closed, just navigate
+  }
   closeAnswer();stopTTS();
   if(gameMode==='competition'){
     const next=currentIdx+1;
