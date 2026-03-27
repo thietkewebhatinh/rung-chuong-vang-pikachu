@@ -4,6 +4,52 @@ import { serveStatic } from 'hono/cloudflare-workers'
 const app = new Hono()
 app.use('/assets/*', serveStatic({ root: './' }))
 
+app.get('/manifest.json', (c) => {
+  return c.json({
+    "name": "Rung Chuông Vàng Pikachu",
+    "short_name": "RCV Pikachu",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1a0a2e",
+    "theme_color": "#FFD700",
+    "icons": [
+      {
+        "src": "/favicon.svg",
+        "sizes": "any",
+        "type": "image/svg+xml",
+        "purpose": "any"
+      },
+      {
+        "src": "/favicon.svg",
+        "sizes": "192x192",
+        "type": "image/svg+xml",
+        "purpose": "maskable"
+      },
+      {
+        "src": "/favicon.svg",
+        "sizes": "512x512",
+        "type": "image/svg+xml",
+        "purpose": "maskable"
+      }
+    ]
+  })
+})
+
+app.get('/sw.js', (c) => {
+  c.header('Content-Type', 'application/javascript')
+  return c.body(`
+    self.addEventListener('install', (e) => {
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', (e) => {
+      return self.clients.claim();
+    });
+    self.addEventListener('fetch', (e) => {
+      e.respondWith(fetch(e.request).catch(() => new Response('Offline', { status: 503 })));
+    });
+  `)
+})
+
 app.get('/', (c) => {
   return c.html(`<!DOCTYPE html>
 <html lang="vi">
@@ -12,12 +58,17 @@ app.get('/', (c) => {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🔔 Rung Chuông Vàng - Pikachu</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a0a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RCV Pikachu">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nunito',sans-serif;background:#1a0a2e;touch-action:manipulation}
-.fredoka{font-family:'Fredoka One',cursive}
+.fredoka{font-family:'Nunito',sans-serif;font-weight:900}
 
 /* STARS */
 .stars-bg{position:fixed;inset:0;background:linear-gradient(135deg,#1a0a2e 0%,#2d1b69 50%,#1a0a2e 100%);z-index:0;overflow:hidden}
@@ -49,9 +100,9 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 .bell-ring{animation:bellRing 1s ease-in-out infinite;display:inline-block;transform-origin:top center}
 
 /* BUTTONS */
-.btn-main{background:linear-gradient(135deg,#FFD700,#FFA500);border:3px solid #fff;border-radius:50px;font-family:'Fredoka One',cursive;color:#1a0a2e;cursor:pointer;animation:btnPulse 2s ease-in-out infinite;transition:transform .2s;text-transform:uppercase;letter-spacing:1px}
+.btn-main{background:linear-gradient(135deg,#FFD700,#FFA500);border:3px solid #fff;border-radius:50px;font-family:'Nunito',sans-serif;font-weight:900;color:#1a0a2e;cursor:pointer;animation:btnPulse 2s ease-in-out infinite;transition:transform .2s;text-transform:uppercase;letter-spacing:1px}
 .btn-main:active{transform:scale(.96)!important}
-.btn-nav{background:linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,165,0,.12));border:2px solid rgba(255,215,0,.5);border-radius:50px;color:#FFD700;font-family:'Fredoka One',cursive;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-nav{background:linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,165,0,.12));border:2px solid rgba(255,215,0,.5);border-radius:50px;color:#FFD700;font-family:'Nunito',sans-serif;font-weight:900;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn-nav:active{transform:scale(.96)!important;background:linear-gradient(135deg,rgba(255,215,0,.32),rgba(255,165,0,.22))}
 
 /* RULE CARDS */
@@ -63,7 +114,7 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 .grid-header{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;padding:6px 0 4px}
 .grid-actions{flex-shrink:0;display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap}
 .grid-container{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;flex:1;align-content:start;overflow:hidden}
-.q-cell{background:linear-gradient(135deg,#FFD700,#FFA500);border:2.5px solid #fff;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;font-family:'Fredoka One',cursive;color:#1a0a2e;position:relative;overflow:hidden;padding:6px 4px;min-height:44px;aspect-ratio:auto}
+.q-cell{background:linear-gradient(135deg,#FFD700,#FFA500);border:2.5px solid #fff;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;font-family:'Nunito',sans-serif;font-weight:900;color:#1a0a2e;position:relative;overflow:hidden;padding:6px 4px;min-height:44px;aspect-ratio:auto}
 .q-cell:active:not(.done){transform:scale(.95)}
 .q-cell.done{background:linear-gradient(135deg,#2e7d32,#1b5e20);border-color:rgba(0,255,136,.5);cursor:pointer;opacity:.9}
 .q-cell .q-num{font-size:1rem;font-weight:900;line-height:1}
@@ -75,14 +126,14 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 #screen-question{justify-content:flex-start;padding:6px 10px;overflow-y:auto;overflow-x:hidden}
 .q-wrap{width:100%;max-width:880px;display:flex;flex-direction:column;min-height:100%;gap:5px;padding-bottom:8px}
 .q-top-bar{flex-shrink:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.q-badge{background:linear-gradient(135deg,#FFD700,#FFA500);color:#1a0a2e;border-radius:50px;font-family:'Fredoka One',cursive;padding:5px 16px;font-size:1rem;white-space:nowrap}
-.mode-badge{border-radius:50px;font-family:'Fredoka One',cursive;padding:4px 12px;font-size:.8rem;white-space:nowrap}
+.q-badge{background:linear-gradient(135deg,#FFD700,#FFA500);color:#1a0a2e;border-radius:50px;font-family:'Nunito',sans-serif;font-weight:900;padding:5px 16px;font-size:1rem;white-space:nowrap}
+.mode-badge{border-radius:50px;font-family:'Nunito',sans-serif;font-weight:900;padding:4px 12px;font-size:.8rem;white-space:nowrap}
 
 /* TIMER ROW */
 .timer-row{flex-shrink:0;display:flex;align-items:center;gap:8px}
 .timer-bar-wrap{flex:1;height:12px;background:rgba(255,255,255,.12);border-radius:10px;overflow:hidden;border:1.5px solid rgba(255,215,0,.25)}
 .timer-bar{height:100%;border-radius:10px;transition:width .12s linear;width:100%}
-.timer-num{font-family:'Fredoka One',cursive;font-size:1.8rem;color:#FFD700;min-width:28px;text-align:center;line-height:1}
+.timer-num{font-family:'Nunito',sans-serif;font-weight:900;font-size:1.8rem;color:#FFD700;min-width:28px;text-align:center;line-height:1}
 
 /* QUESTION CARD */
 .q-card{background:linear-gradient(135deg,rgba(26,10,46,.97),rgba(45,27,105,.97));border:2.5px solid #FFD700;border-radius:18px;padding:10px 14px;flex-shrink:0;box-shadow:0 0 30px rgba(255,215,0,.2)}
@@ -94,11 +145,10 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 
 /* CHOICES */
 .choices-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex-shrink:0}
-.choice-btn{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.04));border:2.5px solid rgba(255,215,0,.35);border-radius:14px;padding:8px 6px;cursor:pointer;transition:all .25s;text-align:center;color:#fff;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;min-height:72px}
+.choice-btn{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.04));border:2.5px solid rgba(255,215,0,.35);border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .25s;text-align:left;color:#fff;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:14px;position:relative;min-height:72px}
 .choice-btn:active:not(.locked){transform:scale(.96)}
-.choice-num-circle{width:30px;height:30px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#1a0a2e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1.1rem;flex-shrink:0}
-.choice-icon{font-size:clamp(1.5rem,3.5vw,2.5rem);line-height:1}
-.choice-label{font-size:clamp(.8rem,1.6vw,1rem);font-weight:800;line-height:1.2}
+.choice-num-circle{width:36px;height:36px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#1a0a2e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:900;font-size:1.3rem;flex-shrink:0}
+.choice-label{font-size:clamp(1.1rem,2vw,1.4rem);font-weight:900;line-height:1.2}
 .choice-btn.correct{background:linear-gradient(135deg,#00c851,#007E33)!important;border-color:#00ff88!important;transform:scale(1.04);box-shadow:0 0 28px rgba(0,200,81,.6);animation:correctPulse .5s ease}
 .choice-btn.wrong{background:linear-gradient(135deg,#ff4444,#cc0000)!important;border-color:#ff6666!important;opacity:.65}
 .choice-btn.selected{background:linear-gradient(135deg,rgba(255,215,0,.28),rgba(255,165,0,.18))!important;border-color:#FFD700!important;transform:translateY(-2px) scale(1.02);box-shadow:0 4px 18px rgba(255,215,0,.45)}
@@ -116,8 +166,8 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 #answer-overlay{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(6px)}
 #answer-overlay.active{display:flex}
 .answer-card{background:linear-gradient(135deg,#1a0a2e,#2d1b69);border:4px solid #FFD700;border-radius:24px;padding:24px 36px;text-align:center;box-shadow:0 0 60px rgba(255,215,0,.5);animation:answerPop .4s cubic-bezier(.175,.885,.32,1.275);max-width:480px;width:90%;max-height:90vh;overflow-y:auto}
-.answer-label{font-family:'Fredoka One',cursive;font-size:1rem;color:rgba(255,215,0,.75);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
-.answer-text{font-family:'Fredoka One',cursive;font-size:clamp(1.3rem,3.5vw,2.2rem);color:#FFD700;text-shadow:0 0 20px rgba(255,215,0,.8);margin-bottom:10px;line-height:1.3}
+.answer-label{font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;color:rgba(255,215,0,.75);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
+.answer-text{font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(1.3rem,3.5vw,2.2rem);color:#FFD700;text-shadow:0 0 20px rgba(255,215,0,.8);margin-bottom:10px;line-height:1.3}
 .confetti-emoji{font-size:2.2rem;animation:pulse .5s ease-in-out infinite alternate;display:block;margin-bottom:14px}
 
 /* LION POPUP OVERLAY */
@@ -135,8 +185,8 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 #result-popup.active{display:flex}
 .result-card{background:linear-gradient(135deg,#1a0a2e,#2d1b69);border:4px solid #FFD700;border-radius:28px;padding:28px 36px;text-align:center;box-shadow:0 0 80px rgba(255,215,0,.5);animation:popupIn .5s cubic-bezier(.175,.885,.32,1.275);max-width:480px;width:90%;max-height:88vh;overflow-y:auto}
 .score-ring{width:140px;height:140px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FFA500);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 0 40px rgba(255,215,0,.6);animation:scoreIn .8s cubic-bezier(.175,.885,.32,1.275)}
-.score-big{font-family:'Fredoka One',cursive;font-size:2.5rem;color:#1a0a2e;line-height:1}
-.score-label{font-family:'Fredoka One',cursive;font-size:.85rem;color:#1a0a2e;opacity:.7}
+.score-big{font-family:'Nunito',sans-serif;font-weight:900;font-size:2.5rem;color:#1a0a2e;line-height:1}
+.score-label{font-family:'Nunito',sans-serif;font-weight:900;font-size:.85rem;color:#1a0a2e;opacity:.7}
 
 /* FLOATING PIKACHU */
 .float-pika{position:fixed;bottom:12px;right:12px;font-size:2.4rem;z-index:50;animation:floatPika 3s ease-in-out infinite;cursor:pointer;filter:drop-shadow(0 5px 12px rgba(255,215,0,.5))}
@@ -149,14 +199,14 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 .particle{position:fixed;pointer-events:none;border-radius:50%;z-index:55;animation:particleFloat linear forwards}
 
 /* MEDIA BUTTON */
-.btn-media{background:linear-gradient(135deg,rgba(255,100,0,.3),rgba(255,50,0,.2));border:2.5px solid rgba(255,150,0,.6);border-radius:50px;color:#FFD700;font-family:'Fredoka One',cursive;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px;animation:pulse 2s ease-in-out infinite}
+.btn-media{background:linear-gradient(135deg,rgba(255,100,0,.3),rgba(255,50,0,.2));border:2.5px solid rgba(255,150,0,.6);border-radius:50px;color:#FFD700;font-family:'Nunito',sans-serif;font-weight:900;cursor:pointer;transition:all .25s;display:inline-flex;align-items:center;gap:8px;animation:pulse 2s ease-in-out infinite}
 .btn-media:active{transform:scale(.96)}
 
 /* TTS status */
 .tts-badge{background:rgba(255,215,0,.12);border:1.5px solid rgba(255,215,0,.3);border-radius:20px;color:rgba(255,215,0,.8);font-size:.72rem;padding:3px 8px;display:inline-flex;align-items:center;gap:3px}
 
 /* SCORE TRACKER */
-.score-tracker{background:rgba(255,215,0,.12);border:1.5px solid rgba(255,215,0,.3);border-radius:20px;padding:3px 10px;color:#FFD700;font-family:'Fredoka One',cursive;font-size:.9rem;white-space:nowrap}
+.score-tracker{background:rgba(255,215,0,.12);border:1.5px solid rgba(255,215,0,.3);border-radius:20px;padding:3px 10px;color:#FFD700;font-family:'Nunito',sans-serif;font-weight:900;font-size:.9rem;white-space:nowrap}
 
 /* COUNTDOWN tick sound */
 @keyframes countdownPulse{0%{transform:scale(1);color:#FFD700}50%{transform:scale(1.4);color:#FF4444}100%{transform:scale(1);color:#FFD700}}
@@ -171,9 +221,9 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 /* MOBILE RESPONSIVE */
 @media(max-width:480px){
   .choices-grid{grid-template-columns:1fr;gap:6px}
-  .choice-btn{flex-direction:row;min-height:52px;padding:8px 12px;text-align:left;gap:10px}
-  .choice-icon{font-size:1.8rem}
-  .choice-label{font-size:.95rem}
+  .choice-btn{flex-direction:row;min-height:56px;padding:8px 12px;text-align:left;gap:12px;justify-content:flex-start}
+  .choice-num-circle{width:32px;height:32px;font-size:1.15rem}
+  .choice-label{font-size:1.15rem}
   .grid-container{grid-template-columns:repeat(5,1fr);gap:5px}
   .q-visual-img{max-width:min(200px,55vw);max-height:min(150px,28vh)}
   .answer-card{padding:18px 22px}
@@ -195,6 +245,13 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
 <div class="stars-bg" id="stars-bg"></div>
 <div class="lightning" id="lightning"></div>
 
+<!-- ===== CLICK TO START OVERLAY (Fix Audio Autoplay) ===== -->
+<div id="click-to-start" style="position:fixed;inset:0;z-index:9999;background:rgba(26,10,46,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(5px)" onclick="this.style.display='none';playIntroMusic()">
+  <div class="pikachu-bounce" style="font-size:5rem;margin-bottom:20px">⚡</div>
+  <h1 style="color:#FFD700;font-family:'Nunito',sans-serif;font-weight:900;font-size:2rem;text-transform:uppercase;letter-spacing:2px;animation:pulse 1s infinite alternate">Nhấn để vào game!</h1>
+  <!-- Bỏ dòng chữ "Bật âm thanh lên nhé" theo yêu cầu người dùng -->
+</div>
+
 <!-- ===== INTRO ===== -->
 <div class="screen active" id="screen-intro">
   <div style="text-align:center;z-index:1;max-width:600px;width:100%;padding:0 8px">
@@ -205,6 +262,9 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
     <h2 class="fredoka" style="color:#fff;font-size:clamp(1.1rem,3vw,2.2rem);margin-bottom:4px">🎮 PIKACHU EDITION 🎮</h2>
     <p style="color:rgba(255,255,255,.55);font-size:.9rem;margin-bottom:20px">Trắc nghiệm Tiếng Anh vui nhộn dành cho bé</p>
     <button class="btn-main" style="font-size:clamp(1.1rem,3vw,1.5rem);padding:14px 44px" onclick="showRules()">⚡ BẮT ĐẦU NGAY! ⚡</button>
+    <div style="margin-top:16px;">
+      <button id="install-btn" class="btn-nav" style="display:none;font-size:1.1rem;padding:12px 28px;border-color:#00ff88;color:#00ff88;background:rgba(0,255,136,0.1);animation:pulse 2s infinite" onclick="installPWA()">📲 CÀI ĐẶT APP (Tải Game)</button>
+    </div>
   </div>
 </div>
 
@@ -234,11 +294,23 @@ html,body{overflow:hidden;height:100%;height:100dvh;width:100vw;font-family:'Nun
         <button class="btn-nav" style="padding:6px 14px;font-size:.85rem" onclick="showIntro()">🏠 Trang chủ</button>
       </div>
     </div>
-    <div class="grid-actions">
-      <button class="btn-main" style="font-size:.95rem;padding:9px 22px;letter-spacing:0;animation:none" onclick="startCompetition()">🏆 Bắt đầu Thi (1→30)</button>
-      <button class="btn-nav" style="font-size:.85rem;padding:7px 16px" onclick="resetProgress()">🔄 Reset</button>
+    <!-- PHẦN 1: THI ĐẤU -->
+    <div style="background:linear-gradient(135deg,rgba(0,255,136,.15),rgba(0,200,81,.05));border:2px solid rgba(0,255,136,.4);border-radius:16px;padding:12px 18px;margin:12px 0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 class="fredoka" style="color:#00ff88;font-size:1.2rem;margin-bottom:2px">🏆 BẮT ĐẦU THI</h2>
+        <p style="color:rgba(255,255,255,.7);font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:700">Tự động lần lượt 30 câu hỏi và chấm điểm.</p>
+      </div>
+      <button class="btn-main" style="font-size:.95rem;padding:10px 24px;letter-spacing:0;background:linear-gradient(135deg,#00c851,#007e33);border-color:#00ff88;color:#fff;animation:none" onclick="startCompetition()">▶ VÀO THI NGAY</button>
     </div>
-    <div class="grid-container" id="question-grid"></div>
+
+    <!-- PHẦN 2: LUYỆN TẬP -->
+    <div style="background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,165,0,.05));border:2px solid rgba(255,215,0,.3);border-radius:16px;padding:14px;flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 class="fredoka" style="color:#FFD700;font-size:1.15rem">📚 LUYỆN TẬP</h2>
+        <button class="btn-nav" style="font-size:.8rem;padding:5px 12px" onclick="resetProgress()">🔄 Chơi lại</button>
+      </div>
+      <div class="grid-container" id="question-grid" style="overflow-y:auto;padding-right:4px;align-content:start"></div>
+    </div>
   </div>
 </div>
 
@@ -703,7 +775,6 @@ function openQuestion(idx){
     btn.id='choice-'+i;
     btn.innerHTML=\`
       <div class="choice-num-circle">\${i+1}</div>
-      <div class="choice-icon">\${ch.icon}</div>
       <div class="choice-label">\${ch.label}</div>
     \`;
     btn.onclick=()=>selectChoice(i);
@@ -1042,8 +1113,31 @@ function pikachuClick(){
 // ====================================================
 // INIT
 // ====================================================
-// Auto play intro music
-setTimeout(()=>playIntroMusic(), 300);
+// Removed auto play to comply with browser autoplay policies. Handled by click-to-start overlay.
+
+// ====================================================
+// PWA INSTALLATION
+// ====================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(console.error);
+}
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('install-btn');
+  if(btn) btn.style.display = 'inline-flex';
+});
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      deferredPrompt = null;
+      const btn = document.getElementById('install-btn');
+      if(btn) btn.style.display = 'none';
+    });
+  }
+}
 
 // countdown overlay click to dismiss
 document.getElementById('countdown-overlay').addEventListener('click',function(){
