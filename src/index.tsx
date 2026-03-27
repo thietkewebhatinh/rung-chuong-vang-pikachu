@@ -396,9 +396,12 @@ let timeLeft = 5;
 let countdownRunning = false;
 let gameMode = 'practice';
 let compScore = 0;
-let selectedChoice = -1;
+let selectedChoice = -1;   // index into SHUFFLED choices array
 let answerRevealed = false;
 let introMusicEnabled = true;
+let shuffledChoices = [];  // shuffled [{icon,label,origIdx}] for current question
+let shuffledCorrect = -1;  // index in shuffledChoices that is correct
+let mediaReady = false;     // true after media for Q26/Q30 has been shown/closed
 
 // ====================================================
 // STARS
@@ -560,7 +563,14 @@ function speakText(text, onEnd){
   window.speechSynthesis.speak(utt);
   setTTSStatus('🔊 Đang đọc...');
 }
-function speakQuestion(){ if(currentQ())speakText(currentQ().speak); }
+function speakQuestion(){
+  if(!currentQ())return;
+  // Re-read with current shuffled order
+  const script = shuffledChoices.length>0
+    ? buildTTSScript(currentQ(), shuffledChoices)
+    : currentQ().speak;
+  speakText(script);
+}
 function stopTTS(){ if(window.speechSynthesis)window.speechSynthesis.cancel(); setTTSStatus('🔊 Sẵn sàng'); }
 function setTTSStatus(txt){ const el=document.getElementById('tts-status'); if(el)el.textContent=txt; }
 function currentQ(){ return Q[currentIdx]; }
@@ -680,10 +690,14 @@ function openQuestion(idx){
   else if(q.media==='gummy'){ mw.style.display='flex';mb.innerHTML='🐻 Xem Gummy Bear!'; }
   else { mw.style.display='none'; }
 
+  // Build shuffled choices (competition=always shuffle, practice=also shuffle for consistency)
+  shuffledChoices = buildShuffledChoices(q);
+  shuffledCorrect = shuffledChoices.findIndex(c=>c.origIdx===q.correct);
+
   // choices
   const cont=document.getElementById('choices-container');
   cont.innerHTML='';
-  q.choices.forEach((ch,i)=>{
+  shuffledChoices.forEach((ch,i)=>{
     const btn=document.createElement('div');
     btn.className='choice-btn';
     btn.id='choice-'+i;
@@ -705,20 +719,53 @@ function openQuestion(idx){
   const actionBtn=document.getElementById('btn-action-next');
   if(actionBtn) actionBtn.textContent='➡ NEXT';
 
+  // reset mediaReady flag
+  mediaReady = !q.media; // non-media questions are immediately ready
+
   showScreen('screen-question');
 
-  // Competition mode: auto TTS then auto-start countdown
+  // Build TTS script using SHUFFLED choice order
+  const ttsScript = buildTTSScript(q, shuffledChoices);
+
+  // Competition mode: auto TTS then:
+  //   - normal questions: auto-start countdown after TTS
+  //   - media questions (Q26/Q30): auto-open media, countdown starts after media closed
   if(gameMode==='competition'){
     setTimeout(()=>{
-      speakText(q.speak, ()=>{
-        // after TTS done, auto start countdown
-        setTimeout(()=>startCountdown(), 400);
+      speakText(ttsScript, ()=>{
+        if(q.media){
+          // Open media automatically after TTS, countdown will fire on close
+          setTimeout(()=>playSpecialMedia(), 400);
+        } else {
+          // Start countdown after TTS done
+          setTimeout(()=>startCountdown(), 400);
+        }
       });
     }, 300);
   } else {
-    // Practice: just TTS
-    setTimeout(()=>speakText(q.speak), 300);
+    // Practice: just TTS with shuffled script
+    setTimeout(()=>speakText(ttsScript), 300);
   }
+}
+
+// Build a speak script using the SHUFFLED choice order
+function buildTTSScript(q, shuffled){
+  const choiceText = shuffled.map((c,i)=>{
+    const num=['One','Two','Three'][i]||String(i+1);
+    return num+': '+c.label;
+  }).join('. ');
+  return q.question+' '+choiceText+'.';
+}
+
+// Shuffle choices, keeping track of original index for correct-answer detection
+function buildShuffledChoices(q){
+  const arr = q.choices.map((c,i)=>({...c, origIdx:i}));
+  // Fisher-Yates shuffle
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
 }
 
 // ====================================================
@@ -789,7 +836,7 @@ function updateTimerBar(){
 // ====================================================
 function selectChoice(i){
   if(answerRevealed)return;
-  selectedChoice=i;
+  selectedChoice=i; // i = index in shuffledChoices
   document.querySelectorAll('.choice-btn').forEach((b,j)=>{
     b.classList.remove('selected');
     if(j===i)b.classList.add('selected');
@@ -816,12 +863,13 @@ function revealAnswer(){
   btns.forEach((b,i)=>{
     b.classList.remove('selected');
     b.classList.add('locked');
-    if(i===q.correct) b.classList.add('correct');
-    else if(i===selectedChoice) b.classList.add('wrong');
+    // i = index in shuffledChoices; shuffledCorrect = correct position in shuffled array
+    if(i===shuffledCorrect) b.classList.add('correct');
     else b.classList.add('wrong');
   });
 
-  const isCorrect=(selectedChoice===q.correct);
+  // isCorrect: did user pick the shuffled-correct slot?
+  const isCorrect=(selectedChoice===shuffledCorrect);
   answered[currentIdx]=isCorrect;
   if(gameMode==='competition'&&isCorrect) compScore++;
   updateProgress();
@@ -851,8 +899,13 @@ function revealAnswer(){
     screenFlash('wrong');
   }
 
+  // Build answer display using SHUFFLED position (e.g. "2. Yellow")
+  const correctShuffled = shuffledChoices[shuffledCorrect];
+  const correctNumStr = String(shuffledCorrect+1);
+  const answerDisplay = correctNumStr + '. ' + correctShuffled.label;
+
   // show answer overlay
-  document.getElementById('answer-text-display').textContent=q.answer;
+  document.getElementById('answer-text-display').textContent=answerDisplay;
   document.getElementById('answer-emoji').textContent=isCorrect?'🎊':'😅';
   const isLast=currentIdx>=Q.length-1;
   const nextLabel=isLast&&gameMode==='competition'?'🏁 KẾT THÚC':'➡ NEXT';
@@ -863,7 +916,7 @@ function revealAnswer(){
   document.getElementById('answer-overlay').classList.add('active');
 
   // speak answer
-  setTimeout(()=>speakText('The answer is: '+q.answer),300);
+  setTimeout(()=>speakText('The answer is: '+correctShuffled.label),300);
 }
 
 function closeAnswer(){
@@ -905,7 +958,6 @@ function nextQuestion(){
 function playSpecialMedia(){
   const q=currentQ();
   if(q.media==='lion'){
-    // Show lion popup
     openLionPopup();
   } else if(q.media==='gummy'){
     const ov=document.getElementById('media-overlay');
@@ -921,16 +973,28 @@ function openLionPopup(){
 }
 function closeLionPopup(){
   document.getElementById('lion-overlay').classList.remove('active');
-  stopLionSound(); // Stop lion audio when popup closes
+  stopLionSound();
+  // After closing lion popup → mark media as seen, start countdown in competition
+  onMediaClosed();
 }
 function closeMedia(){
   const ov=document.getElementById('media-overlay');
   document.getElementById('media-video').pause();
   ov.classList.remove('active');
+  // After closing gummy bear video → mark media as seen, start countdown in competition
+  onMediaClosed();
 }
 function revealAnswerFromMedia(){
-  closeMedia();
-  revealAnswer();
+  closeMedia(); // this already calls onMediaClosed → countdown starts
+  // Do NOT call revealAnswer here; let countdown run, or user presses NEXT
+}
+// Called whenever a media popup/overlay is closed
+function onMediaClosed(){
+  if(mediaReady) return; // already handled
+  mediaReady = true;
+  if(gameMode==='competition' && !answerRevealed && !countdownRunning){
+    setTimeout(()=>startCountdown(), 300);
+  }
 }
 
 // ====================================================
